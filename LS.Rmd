@@ -1,0 +1,461 @@
+---
+title: "LS Insurance"
+author: "Sergio Fernández Serrano"
+date: "`r format(Sys.Date(), '%d de %B de %Y')`"
+output:
+  html_document:
+    code_folding: hide
+    theme: readable
+    number_sections: yes
+    toc: yes
+    toc_depth: 2
+    toc_float: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	include = TRUE,
+	warning = FALSE,
+	message = FALSE,
+	fig.align = "center",
+	out.width = "90%"
+)
+```
+
+![](LS.jpg)
+
+# Introducción y definición de objetivos
+
+Nos complace presentar un innovador proyecto de machine learning enfocado en la transformación digital del sector asegurador. El objetivo principal es abordar dos desafíos clave en la industria; el análisis exploratorio de los datos de la compañía aseguradora LS y la creación de modelos predictivos para estimar el coste de siniestros y clasificarlos de manera eficiente.
+
+En primer lugar, el análisis exploratorio nos permitirá identificar patrones, tendencias y posibles anomalías en el conjunto de datos proporcionado por la compañía aseguradora. Mediante técnicas avanzadas de visualización y análisis estadístico, seremos capaces de extraer información valiosa y descubrir oportunidades de mejora en la gestión de riesgos y la toma de decisiones.
+
+En segundo lugar, el desarrollo de modelos predictivos basados en machine learning nos permitirá anticiparnos a los costes de siniestros y clasificarlos de manera más precisa. Estos modelos, entrenados con un vasto conjunto de datos históricos, nos brindarán una herramienta eficaz para optimizar la evaluación del riesgo, la asignación de recursos y el diseño de estrategias de prevención.
+
+Con la implementación de este proyecto, aspiramos a impulsar la eficiencia operativa y la rentabilidad de la compañía aseguradora, así como mejorar la calidad del servicio ofrecido a sus clientes. Estamos convencidos de que la adopción de tecnologías de machine learning y el análisis de datos en el sector asegurador es crucial para mantenerse competitivo en un mercado cada vez más exigente y en constante evolución.
+
+**¡Síguenos en este apasionante viaje hacia la digitalización e innovación en el mundo de los seguros!**
+
+\
+
+# Análisis exploratorio inicial
+
+```{r}
+paste(R.Version()$version.string)
+```
+
+```{r}
+library(readr)
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(kableExtra)
+library(ggplot2)
+library(GGally)
+library(gridExtra)
+library(cowplot)
+library(ggcorrplot)
+library(gmodels)
+library(caret)
+library(ggfortify)
+library(scales)
+library(class)
+library(distances)
+library(visreg)
+library(rpart)
+library(rpart.plot)
+library(rattle)
+library(randomForest)
+library(e1071)
+library(pROC)
+library(cluster)
+library(tidyverse)
+library(stringr)
+library(Metrics)
+library(factoextra)
+library(NbClust)
+```
+
+## Lectura y preparación de los datos
+
+Leemos el dataset original.
+
+```{r}
+LS_original <- read_excel("LS.xlsx")
+```
+
+```{r}
+LS <- LS_original %>% mutate_at(vars("f_ocurrencia", "f_declaracion", "f_cierre"), as.Date)
+```
+
+```{r}
+str(LS)
+```
+
+```{r}
+summary(LS)
+```
+
+
+```{r}
+head(LS, 10) %>%
+  kbl() %>%
+  kable_material(c("striped", "hover")) %>%
+  scroll_box(width = "100%", height = "350px")
+```
+
+```{r}
+dim(LS)
+```
+
+
+\
+
+El dataset contiene **143.930** observaciones (correspondientes a siniestros cada una) y **15** variables (de las cuales son *8* cualitativas, *4* cuantitativas y *3* fechas).
+
+A continuación, la descripción de cada una de las variables:
+
+-   **siniestro**: número identificador del siniestro.
+
+-   **producto**: producto al que va a asociado el siniestro y que tiene una serie de coberturas y garantías en las cuales no entramos.
+
+-   **ramo**: ramo asegurador al que se asigna el siniestro. DJ (defensa jurídica) o PP (pérdida pecuniaria)
+
+-   **tipo**: tipo de seguro en función de la manera en la que se adquiere el riesgo, puede ser adquirido de manera directa a través de la venta directa por la aseguradora (SD - seguro directo) o puede ser un riesgo aceptado si es un riesgo que se adquiere de otra compañía de seguros (RA - reaseguro aceptado).
+
+-   **f_ocurrencia**: fecha en la que ocurre el siniestro.
+
+-   **f_declaracion**: fecha en la que el siniestro es comunicado a la compañía de seguros y es abierto.
+
+-   **f_cierre**: fecha en la que termina el siniestro y es cerrado el expediente.
+
+-   **estado**: estatus en el que se encuentra el siniestro (abierto, cerrado, reaperturado...)
+
+-   **cobertura**: nombre y tipo de cobertura siniestrable que aplica en el siniestro y por la que la compañía proporciona una cobertura al asegurado.
+
+-   **prov_inicial_cob**: provisión con la que se abre el siniestro.
+
+-   **prov_cob**: provisión actual que tiene el siniestro en el momento del análisis a 31/12/2022.
+
+-   **pago_total_cob**: cuantía total que se ha pagado hasta el momento (31/12/2022) en el siniestro.
+
+-   **coste_total_cob**: sumatorio de provision_cobertura_vl + importe_pago_total_cobertura_vl hasta el momento (31/12/2022) en el siniestro.
+
+-   **medio**: vía mediante la cual se ha proporcionado la cobertura. En este caso, como se tratan de defensa jurídica, es la vía jurídica por la que se ha procedido en el siniestro (acuerdo extrajudicial, juicio con abogado de la red interna o juicio con abogado particular)
+
+-   **materia**: asunto principal que motiva el siniestro y que motiva el expediente.
+
+\
+
+## Tratamiento de datos faltantes
+
+No hacemos tratamiento de datos faltantes pues nuestro conocimiento del negocio nos dice que es normal que haya datos faltantes en la variable fecha_cierre_dt ya que puede haber siniestros en estado abierto.
+
+\
+
+## División del dataset
+
+Dividimos el dataset en train, test y validation y posteriormente comprobamos que número de observaciones tiene cada una de las partes respecto al dataset total.
+
+```{r}
+set.seed(108)
+numero_total = nrow(LS)
+# Porcentajes de train, test y validation
+w_train = .5
+w_test = .25
+w_validation = 1 - (w_train + w_test)
+# Todos los índices
+indices = seq(1:numero_total) 
+# Muestreo
+indices_train = sample(1:numero_total, numero_total * w_train)
+indices_test = sample(indices[-indices_train], numero_total * w_test)
+indices_validation = indices[-c(indices_train,indices_test)]
+# Agrupamos
+LS_train = LS[indices_train,]
+LS_test = LS[indices_test,]
+LS_validation = LS[indices_validation,]
+```
+
+```{r}
+nrow(LS)
+nrow(LS_train)
+nrow(LS_test)
+nrow(LS_validation)
+```
+
+\
+\
+
+# Análisis univariante
+
+## Análisis de variables cualitativas
+
+\
+
+**producto**
+
+```{r}
+merge(setNames(as.data.frame(table(LS_train$producto)), c("producto", "count")),
+      setNames(as.data.frame(round(prop.table(table(LS_train$producto))*100, 2)), c("producto", "prop (%)"))
+) %>%
+  arrange(desc(count)) %>%
+  kbl() %>%
+  kable_material(c("striped", "hover")) %>%
+  scroll_box(width = "100%", height = "350px")
+```
+
+```{r}
+ggplot(LS_train, aes(producto)) +
+  geom_bar(fill = "#009494") +
+  coord_flip() +
+  labs(x = "producto", y = "Nº producto", title = "Tipos producto") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+\
+
+**ramo**
+
+```{r}
+merge(setNames(as.data.frame(table(LS_train$ramo)), c("ramo", "count")),
+      setNames(as.data.frame(round(prop.table(table(LS_train$ramo))*100, 2)), c("ramo", "prop (%)"))
+) %>%
+  arrange(desc(count)) %>%
+  kbl() %>%
+  kable_material(c("striped", "hover")) %>%
+  scroll_box(width = "100%", height = "350px")
+```
+
+```{r}
+ggplot(LS_train, aes(ramo)) +
+  geom_bar(fill = "#009494") +
+  labs(x = "ramo", y = "Nº ramo", title = "Tipos ramo") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+\
+
+**tipo**
+
+```{r}
+merge(setNames(as.data.frame(table(LS_train$tipo)), c("tipo", "count")),
+      setNames(as.data.frame(round(prop.table(table(LS_train$tipo))*100, 2)), c("tipo", "prop (%)"))
+) %>%
+  arrange(desc(count)) %>%
+  kbl() %>%
+  kable_material(c("striped", "hover")) %>%
+  scroll_box(width = "100%", height = "350px")
+```
+
+```{r}
+ggplot(LS_train, aes(tipo)) +
+  geom_bar(fill = "#009494") +
+  labs(x = "tipo", y = "Nº tipo", title = "Tipos tipo") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+\
+
+**estado**
+
+```{r}
+merge(setNames(as.data.frame(table(LS_train$estado)), c("estado", "count")),
+      setNames(as.data.frame(round(prop.table(table(LS_train$estado))*100, 2)), c("estado", "prop (%)"))
+) %>%
+  arrange(desc(count)) %>%
+  kbl() %>%
+  kable_material(c("striped", "hover")) %>%
+  scroll_box(width = "100%", height = "350px")
+```
+
+```{r}
+ggplot(LS_train, aes(estado)) +
+  geom_bar(fill = "#009494") +
+  labs(x = "estado", y = "Nº estado", title = "estado") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+\
+
+**cobertura**
+
+```{r}
+merge(setNames(as.data.frame(table(LS_train$cobertura)), c("cobertura", "count")),
+      setNames(as.data.frame(round(prop.table(table(LS_train$cobertura))*100, 2)), c("cobertura", "prop (%)"))
+) %>%
+  arrange(desc(count)) %>%
+  kbl() %>%
+  kable_material(c("striped", "hover")) %>%
+  scroll_box(width = "100%", height = "350px")
+```
+
+```{r}
+ggplot(LS_train, aes(cobertura)) +
+  geom_bar(fill = "#009494") +
+  coord_flip() + 
+  labs(x = "cobertura", y = "Nº cobertura", title = "cobertura") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+\
+
+**medio**
+
+```{r}
+merge(setNames(as.data.frame(table(LS_train$medio)), c("medio", "count")),
+      setNames(as.data.frame(round(prop.table(table(LS_train$medio))*100, 2)), c("medio", "prop (%)"))
+) %>%
+  arrange(desc(count)) %>%
+  kbl() %>%
+  kable_material(c("striped", "hover")) %>%
+  scroll_box(width = "100%", height = "350px")
+```
+
+```{r}
+ggplot(LS_train, aes(medio)) +
+  geom_bar(fill = "#009494") +
+  labs(x = "medio", y = "Nº medio", title = "medio") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+\
+
+**materia**
+
+```{r}
+merge(setNames(as.data.frame(table(LS_train$materia)), c("materia", "count")),
+      setNames(as.data.frame(round(prop.table(table(LS_train$materia))*100, 2)), c("materia", "prop (%)"))
+) %>%
+  arrange(desc(count)) %>%
+  kbl() %>%
+  kable_material(c("striped", "hover")) %>%
+  scroll_box(width = "100%", height = "350px")
+```
+
+```{r}
+ggplot(LS_train, aes(materia)) +
+  geom_bar(fill = "#009494") +
+  coord_flip() + 
+  labs(x = "materia", y = "Nº materia", title = "materia") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+\
+
+## Análisis de variables temporales
+
+\
+
+**f_ocurrencia**
+
+\
+
+**f_declaracion**
+
+\
+
+**f_cierre**
+
+\
+
+## Análisis de variables cuantitativas
+
+\
+
+**prov_inicial_cob**
+
+\
+
+**prov_cob**
+
+\
+
+**pago_total_cob**
+
+\
+
+**coste_total_cob**
+
+\
+\
+
+# Análisis multivariante
+
+\
+\
+
+# Procesado de variables cualitativas
+
+\
+\
+
+# Modelo de regresión lineal
+
+\
+\
+
+# Conclusiones preliminares
+
+\
+\
+
+# Aprendizaje no supervisado
+
+## K-Means
+
+\
+\
+
+# Técnicas de reducción de la dimensionalidad
+
+## PCA
+
+\
+\
+
+# Aprendizaje supervisado
+
+## GLM
+
+## KNN
+
+## DECISION TREES
+
+## RANDOM FOREST
+
+## SVM
+
+\
+\
+
+# Evaluación y comparación de modelos
+
+## K-fold Cross Validation
+
+## N-fold Cross Validation
+
+\
+\
+
+## Conclusiones
+
+\
+
+# Punto de corte ROC
+
+\
+
+# Deep Learning
+
+\
+\
+
+# Explicabilidad
+
+\
+\
+
+# Series Temporales
+
+
