@@ -294,52 +294,87 @@ merge(setNames(as.data.frame(table(LS_train$materia)), c("materia", "count")),
 ```{r}
 # PLOT PRODUCTO
 # Paso 1: Sumarizar y ordenar los datos
-LS_train_sorted15 <- LS_train %>%
+LS_train_primeros15 <- LS_train %>%
   group_by(producto) %>%
   summarize(count = n()) %>%
   arrange(-count) %>%
   slice(1:15) # Paso 2: Limitar a los 15 productos más frecuentes
 
-# Paso 3: Gráfico
-plot_producto <- ggplot(LS_train_sorted15, aes(x = reorder(producto, count), y = count)) + 
+# Paso 2: Gráfico
+plot_producto <- ggplot(LS_train_primeros15, aes(x = reorder(producto, count), y = count)) + 
                     geom_bar(stat = "identity", fill = "#009494") +
                     coord_flip() +
-                    labs(x = "producto", y = "Nº producto", title = "Tipos producto") +
+                    labs(x = "producto", y = "Nº producto", title = "Producto") +
                     theme(plot.title = element_text(hjust = 0.5))
                     
                     
+
 # PLOT RAMO                    
 plot_ramo <- ggplot(LS_train, aes(ramo)) +
                 geom_bar(fill = "#009494") +
-                labs(x = "ramo", y = "Nº ramo", title = "Tipos ramo") +
+                labs(x = "ramo", y = "Nº ramo", title = "Ramo") +
                 theme(plot.title = element_text(hjust = 0.5))
+
 
 
 # PLOT TIPO
 plot_tipo <- ggplot(LS_train, aes(tipo)) +
                 geom_bar(fill = "#009494") +
-                labs(x = "tipo", y = "Nº tipo", title = "Tipos tipo") +
+                labs(x = "tipo", y = "Nº tipo", title = "Tipo") +
                 theme(plot.title = element_text(hjust = 0.5))
 
 
+
 # PLOT ESTADO
+# Paso 1: Calcular el número de ocurrencias para cada 'estado'
+estado_counts <- LS_train %>% 
+  group_by(estado) %>% 
+  summarise(n = n()) %>% 
+  arrange(-n)
+
+# Paso 2: Usar esa información para reordenar la variable 'estado' en el dataframe
+LS_train$estado <- factor(LS_train$estado, levels = estado_counts$estado)
+
+# Paso 3: Crear el gráfico
 plot_estado <- ggplot(LS_train, aes(estado)) +
                   geom_bar(fill = "#009494") +
                   labs(x = "estado", y = "Nº estado", title = "Estado") +
                   theme(plot.title = element_text(hjust = 0.5), 
-                        axis.text.x = element_text(angle = 10, hjust = 1))
+                        axis.text.x = element_text(angle = 15, hjust = 1))
                   
 
+
 # PLOT MEDIO
+# Paso 1: Calcular el número de ocurrencias para cada 'medio'
+medio_counts <- LS_train %>% 
+  group_by(medio) %>% 
+  summarise(n = n()) %>% 
+  arrange(-n)
+
+# Paso 2: Usar esa información para reordenar la variable 'medio' en el dataframe
+LS_train$medio <- factor(LS_train$medio, levels = medio_counts$medio)
+
+# Paso 3: Crear el gráfico
 plot_medio <- ggplot(LS_train, aes(medio)) +
                  geom_bar(fill = "#009494") +
                  labs(x = "medio", y = "Nº medio", title = "Medio") +
                  theme(plot.title = element_text(hjust = 0.5), 
-                       axis.text.x = element_text(angle = 10, hjust = 1))
+                       axis.text.x = element_text(angle = 15, hjust = 1))
                  
                  
+
 # PLOT MATERIA                 
-plot_materia <- ggplot(LS_train, aes(materia)) +
+# Paso 1: Calcular el número de ocurrencias para cada 'materia'
+materia_counts <- LS_train %>% 
+  group_by(materia) %>% 
+  summarise(n = n()) %>% 
+  arrange(n)
+
+# Paso 2: Usar esa información para reordenar la variable 'materia' en el dataframe
+LS_train$materia <- factor(LS_train$materia, levels = materia_counts$materia)
+
+# Paso 3: Crear el gráfico
+plot_materia <- ggplot(LS_train, aes(x = materia)) +
                    geom_bar(fill = "#009494") +
                    coord_flip() + 
                    labs(x = "materia", y = "Nº materia", title = "Materia") +
@@ -388,15 +423,201 @@ Por otro lado es relevante apreciar que en al rededor de un 72% de los siniestro
 
 \
 
+```{r}
+# Extraer el año y convertirlo en una variable categórica
+LS_train <- LS_train %>%
+  mutate(year_ocurrencia = as.factor(lubridate::year(f_ocurrencia)),
+         year_declaracion = as.factor(lubridate::year(f_declaracion)),
+         year_cierre = as.factor(lubridate::year(f_cierre)))
+```
+
+
 **FECHA OCURRENCIA**
+
+```{r}
+tabla_ocurrencia <- LS_train %>%
+  group_by(year_ocurrencia) %>%
+  summarise(count = n()) %>%
+  mutate(prop = round((count / sum(count)) * 100, 2)) %>%
+  arrange(desc(count))
+
+tabla_ocurrencia %>%
+  kbl(col.names = c("year", "count", "prop (%)")) %>%
+  kable_material(c("striped", "hover")) %>%
+  scroll_box(width = "100%", height = "350px")
+```
+
+```{r}
+# PLOT AÑO OCURRENCIA
+plot_year_ocurrencia <- ggplot(LS_train, aes(x = year_ocurrencia)) +
+  geom_line(stat = 'count', aes(group = 1), color = "#009494") +
+  labs(x = "Año de ocurrencia", y = "Nº de siniestros", title = "Siniestros por año de ocurrencia") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
 
 \
 
 **FECHA DECLARACIÓN**
 
+```{r}
+tabla_declaracion <- LS_train %>%
+  group_by(year_declaracion) %>%
+  summarise(count = n()) %>%
+  mutate(prop = round((count / sum(count)) * 100, 2)) %>%
+  arrange(desc(count))
+
+tabla_declaracion %>%
+  kbl(col.names = c("year", "count", "prop (%)")) %>%
+  kable_material(c("striped", "hover")) %>%
+  scroll_box(width = "100%", height = "350px")
+```
+
+```{r}
+# PLOT AÑO DECLARACIÓN
+plot_year_declaracion <- ggplot(LS_train, aes(x = year_declaracion)) +
+  geom_line(stat = 'count', aes(group = 1), color = "#009494") +
+  labs(x = "Año de declaración", y = "Nº de siniestros", title = "Siniestros por año de declaración") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
 \
 
 **FECHA CIERRE**
+
+```{r}
+tabla_cierre <- LS_train %>%
+  group_by(year_cierre) %>%
+  summarise(count = n()) %>%
+  mutate(prop = round((count / sum(count)) * 100, 2)) %>%
+  arrange(desc(count))
+
+tabla_cierre %>%
+  kbl(col.names = c("year", "count", "prop (%)")) %>%
+  kable_material(c("striped", "hover")) %>%
+  scroll_box(width = "100%", height = "350px")
+```
+
+```{r}
+# PLOT AÑO CIERRE
+plot_year_cierre <- ggplot(LS_train, aes(x = year_cierre)) +
+  geom_line(stat = 'count', aes(group = 1), color = "#009494") +
+  labs(x = "Año de cierre", y = "Nº de siniestros", title = "Siniestros por año de cierre") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+\
+
+```{r}
+# GRÁFICOS JUNTOS POR AÑO
+# Primero hay que modificar el dataframe para que las fechas estén en una sola columna y tener otra columna que identifique el tipo de fecha
+LS_train_long <- LS_train %>%
+  select(siniestro, year_ocurrencia, year_declaracion, year_cierre) %>%
+  gather(key = "Tipo de Fecha", value = "Año", -siniestro)
+
+plot_fechas_año <- ggplot(LS_train_long, aes(x = Año, group = `Tipo de Fecha`)) +
+  geom_line(stat = 'count', aes(color = `Tipo de Fecha`)) +
+  labs(x = "Año", y = "Nº de siniestros", title = "Siniestros por año según tipo de fecha") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_color_manual(values = c("year_ocurrencia" = "blue", "year_declaracion" = "green", "year_cierre" = "red"),
+                     name = "Tipo de Fecha")
+
+print(plot_fechas_año)
+```
+
+Podemos observar la tendencia de que año tras año el número de siniestros que ocurren y son declaran por parte de los asegurados es creciente y con una pendiente bastante acentuada. 
+
+Esto puede ser por varios motivos pero uno de los principales en este negocio es el crecimiento de la cartera y la asunción de nuevos riesgo con el correspondiente crecimiento de las primas devengadas anuales. Este hecho no lo podemos comprobar ya que el dataset carece de datos relativos a primas, no obstante, nuestro conocimiento del negocio nos hace pensar que es así.
+
+Importante a tener en cuenta es que los crecimientos de cartera y en número de siniestros no siempre son proporcionales, no todas las carteras (productos) tienen los mismo comportamientos y en el estudio de la rentabilidad de las mismas hay que tener en cuenta la rentabilidad o el ratio de siniestralidad de las mismas.
+
+```{r}
+# PLOT MES OCURRENCIA
+LS_train$mes_ocurrencia <- lubridate::month(LS_train$f_ocurrencia, label = TRUE)
+
+plot_mes_ocurrencia <- ggplot(LS_train, aes(mes_ocurrencia)) + 
+  geom_bar(fill = "#009494") +
+  labs(x = "Mes de ocurrencia", y = "Nº de siniestros", title = "Distribución de siniestros ocurridos por mes") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+
+# PLOT MES DECLARACIÓN
+LS_train$mes_declaracion <- lubridate::month(LS_train$f_declaracion, label = TRUE)
+
+plot_mes_declaracion <- ggplot(LS_train, aes(mes_declaracion)) + 
+  geom_bar(fill = "#009494") +
+  labs(x = "Mes de declaración", y = "Nº de siniestros", title = "Distribución de siniestros declarados por mes") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+
+# PLOT MES CIERRE
+LS_train$mes_cierre <- lubridate::month(LS_train$f_cierre, label = TRUE)
+
+plot_mes_cierre <- ggplot(LS_train, aes(mes_cierre)) + 
+  geom_bar(fill = "#009494") +
+  labs(x = "Mes de cierre", y = "Nº de siniestros", title = "Distribución de siniestros cerrados por mes") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r}
+plot_mes_ocurrencia
+plot_mes_declaracion
+plot_mes_cierre
+```
+
+Respecto al número de siniestros ocurridos por mes hay una distribución más o menos homogénea pero se aprecia que hay menor número de siniestros en los meses donde hay mayores festividades, abril y diciembre, así como agosto por el periodo vacacional de verano. 
+
+Esto se acentúa en los momentos de declarar siniestros por parte de los asegurados que normalmente esperan unos días en comunicarlos en caso de encontrarse en periodos estivales. Y pasa lo mismo en lo que respecta al cierre de siniestros por parte de los tramitadores de LS Insurance.
+
+Intuímos un cierto patrón; los meses sin fiestas sube el número de siniestros ocurridos, declarados y cerrados mientras que por el contrario los meses con fiestas este número de siniestros baja.
+
+```{r}
+LS_train$dias_para_declarar <- as.numeric(difftime(LS_train$f_declaracion, LS_train$f_ocurrencia, units = "days"))
+LS_train$dias_para_cerrar <- as.numeric(difftime(LS_train$f_cierre, LS_train$f_declaracion, units = "days"))
+
+# Histograma con línea de densidad para días para declarar
+plot_dias_para_declarar <- ggplot(LS_train, aes(x = dias_para_declarar)) +
+  geom_histogram(aes(y = ..density..), fill = "#009494", bins = 50, alpha = 0.7) +
+  geom_density(color = "green", size = 1.2) +
+  labs(x = "Días para declarar", y = "Densidad", title = "Distribución de días para declarar") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Histograma con línea de densidad para días para cerrar
+plot_dias_para_cerrar <- ggplot(LS_train, aes(x = dias_para_cerrar)) +
+  geom_histogram(aes(y = ..density..), fill = "#009494", bins = 50, alpha = 0.7) +
+  geom_density(color = "red", size = 1.2) +
+  labs(x = "Días para cerrar", y = "Densidad", title = "Distribución de días para cerrar") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Para visualizar los gráficos, simplemente ejecuta sus nombres:
+grid.arrange(plot_dias_para_declarar, 
+             plot_dias_para_cerrar, 
+             ncol=2)
+```
+
+```{r}
+# Porcentaje de siniestros declarados antes de 90 días
+porcentaje_declara_antes_90 <- mean(LS_train$dias_para_declarar < 90) * 100
+porcentaje_declara_antes_365 <- mean(LS_train$dias_para_declarar < 365) * 100
+
+# Porcentaje de siniestros cerrados antes de 90 días (excluyendo los NA)
+porcentaje_cierra_antes_90 <- mean(LS_train$dias_para_cerrar < 90, na.rm = TRUE) * 100
+porcentaje_cierra_antes_365 <- mean(LS_train$dias_para_cerrar < 365, na.rm = TRUE) * 100
+
+cat(paste0("% de siniestros declarados antes de 90 días: ", round(porcentaje_declara_antes_90, 2), "%\n"))
+cat(paste0("% de siniestros declarados antes de 365 días: ", round(porcentaje_declara_antes_365, 2), "%\n"))
+cat(paste0("% de siniestros cerrados antes de 90 días: ", round(porcentaje_cierra_antes_90, 2), "%\n"))
+cat(paste0("% de siniestros cerrados antes de 365 días: ", round(porcentaje_cierra_antes_365, 2), "%\n"))
+```
+Aunque el 77% de los siniestros se declara en los primeros 3 meses, exite un alto porcentaje de que el asegurado se demore en la comunicación de los mismos llegando a veces a tardar
+
+HEADMAPS
 
 \
 
