@@ -46,35 +46,37 @@ paste(R.Version()$version.string)
 ```
 
 ```{r}
-library(readr)
-library(readxl)
-library(dplyr)
-library(tidyr)
-library(kableExtra)
-library(ggplot2)
-library(GGally)
-library(gridExtra)
-library(cowplot)
-library(ggcorrplot)
-library(gmodels)
-library(caret)
-library(ggfortify)
-library(scales)
-library(class)
-library(distances)
-library(visreg)
-library(rpart)
-library(rpart.plot)
-library(rattle)
-library(randomForest)
-library(e1071)
-library(pROC)
-library(cluster)
-library(tidyverse)
-library(stringr)
-library(Metrics)
-library(factoextra)
-library(NbClust)
+library(readr) # Lectura de datos especialmente CSVs
+library(readxl) # Lectura de datos especialmente Excel (.xls y .xlsx)
+library(dplyr) # Para manipulación y transformación de datos en R
+library(tidyr) # Permite manipular la forma de conjuntos de datos en R
+library(DT) # Mejora el trabajo con dataframes
+library(kableExtra) # Mejora y estiliza tablas
+library(ggplot2) # Para gráficos en R
+library(GGally) # Extensión de ggplot2, facilitando la visualización de pares y combinaciones de datos
+library(gridExtra) # Herramientas para trabajar con múltiples gráficos de ggplot2
+library(cowplot) # Para mejoras de gráficos de ggplot2
+library(ggcorrplot) # Visualización de matrices de correlación usando ggplot2
+library(gmodels) # Varios modelos matemáticos y herramientas estadísticas
+library(ggfortify) # Extensión de ggplot2 con funciones para visualizar resultados de varios modelos estadísticos
+library(caret) # Construcción y evaluación de modelos de aprendizaje automático
+library(scales) # Herramientas de escalado y formateo de datos
+library(class) # Funciones para clasificación
+library(distances) # Herramientas para trabajar con distancias y métricas
+library(visreg) # Visualización de modelos de regresión
+library(rpart) # Paquete de partición recursiva y árboles de regresión
+library(rpart.plot) # Visualización de árboles rpart
+library(rattle) # Interfaz gráfica y utilidades para minería de datos
+library(randomForest) # Paquete que implementa el algoritmo de Random Forest para clasificación y regresión
+library(e1071) # Funciones de estadística y aprendizaje automático, incluye máquinas de soporte vectorial
+library(pROC) # Herramientas para visualizar y comparar ROC curves
+library(cluster) # Métodos de clustering
+library(tidyverse) # Colección de paquetes relacionados con la manipulación y visualización de datos (incluye ggplot2, dplyr, tidyr ...)
+library(stringr) # Manipulación de cadenas de caracteres
+library(Metrics) # Funciones para calcular métricas de modelos predictivos
+library(factoextra) # Herramientas de visualización para resultados de descomposición
+library(NbClust) # Determina y proporciona el número óptimo de clusters por diferentes métodos
+
 ```
 
 ## Lectura y preparación de los datos
@@ -97,7 +99,6 @@ str(LS)
 summary(LS)
 ```
 
-
 ```{r}
 head(LS, 10) %>%
   kbl() %>%
@@ -108,7 +109,6 @@ head(LS, 10) %>%
 ```{r}
 dim(LS)
 ```
-
 
 \
 
@@ -150,7 +150,7 @@ A continuación, la descripción de cada una de las variables:
 
 ## Tratamiento de datos faltantes
 
-No hacemos tratamiento de datos faltantes pues nuestro conocimiento del negocio nos dice que es normal que haya datos faltantes en la variable fecha_cierre_dt ya que puede haber siniestros en estado abierto.
+No hacemos tratamiento de datos faltantes pues nuestro conocimiento del negocio nos dice que es normal que haya datos faltantes en la variable **f_cierre** ya que puede haber siniestros en estado abierto.
 
 \
 
@@ -193,7 +193,7 @@ nrow(LS_validation)
 
 \
 
-**producto**
+**PRODUCTO**
 
 ```{r}
 merge(setNames(as.data.frame(table(LS_train$producto)), c("producto", "count")),
@@ -205,17 +205,9 @@ merge(setNames(as.data.frame(table(LS_train$producto)), c("producto", "count")),
   scroll_box(width = "100%", height = "350px")
 ```
 
-```{r}
-ggplot(LS_train, aes(producto)) +
-  geom_bar(fill = "#009494") +
-  coord_flip() +
-  labs(x = "producto", y = "Nº producto", title = "Tipos producto") +
-  theme(plot.title = element_text(hjust = 0.5))
-```
-
 \
 
-**ramo**
+**RAMO**
 
 ```{r}
 merge(setNames(as.data.frame(table(LS_train$ramo)), c("ramo", "count")),
@@ -224,19 +216,12 @@ merge(setNames(as.data.frame(table(LS_train$ramo)), c("ramo", "count")),
   arrange(desc(count)) %>%
   kbl() %>%
   kable_material(c("striped", "hover")) %>%
-  scroll_box(width = "100%", height = "350px")
-```
-
-```{r}
-ggplot(LS_train, aes(ramo)) +
-  geom_bar(fill = "#009494") +
-  labs(x = "ramo", y = "Nº ramo", title = "Tipos ramo") +
-  theme(plot.title = element_text(hjust = 0.5))
+  scroll_box(width = "100%", height = "auto")
 ```
 
 \
 
-**tipo**
+**TIPO**
 
 ```{r}
 merge(setNames(as.data.frame(table(LS_train$tipo)), c("tipo", "count")),
@@ -245,19 +230,12 @@ merge(setNames(as.data.frame(table(LS_train$tipo)), c("tipo", "count")),
   arrange(desc(count)) %>%
   kbl() %>%
   kable_material(c("striped", "hover")) %>%
-  scroll_box(width = "100%", height = "350px")
-```
-
-```{r}
-ggplot(LS_train, aes(tipo)) +
-  geom_bar(fill = "#009494") +
-  labs(x = "tipo", y = "Nº tipo", title = "Tipos tipo") +
-  theme(plot.title = element_text(hjust = 0.5))
+  scroll_box(width = "100%", height = "auto")
 ```
 
 \
 
-**estado**
+**ESTADO**
 
 ```{r}
 merge(setNames(as.data.frame(table(LS_train$estado)), c("estado", "count")),
@@ -266,19 +244,12 @@ merge(setNames(as.data.frame(table(LS_train$estado)), c("estado", "count")),
   arrange(desc(count)) %>%
   kbl() %>%
   kable_material(c("striped", "hover")) %>%
-  scroll_box(width = "100%", height = "350px")
-```
-
-```{r}
-ggplot(LS_train, aes(estado)) +
-  geom_bar(fill = "#009494") +
-  labs(x = "estado", y = "Nº estado", title = "estado") +
-  theme(plot.title = element_text(hjust = 0.5))
+  scroll_box(width = "100%", height = "auto")
 ```
 
 \
 
-**cobertura**
+**COBERTURA**
 
 ```{r}
 merge(setNames(as.data.frame(table(LS_train$cobertura)), c("cobertura", "count")),
@@ -290,17 +261,9 @@ merge(setNames(as.data.frame(table(LS_train$cobertura)), c("cobertura", "count")
   scroll_box(width = "100%", height = "350px")
 ```
 
-```{r}
-ggplot(LS_train, aes(cobertura)) +
-  geom_bar(fill = "#009494") +
-  coord_flip() + 
-  labs(x = "cobertura", y = "Nº cobertura", title = "cobertura") +
-  theme(plot.title = element_text(hjust = 0.5))
-```
-
 \
 
-**medio**
+**MEDIO**
 
 ```{r}
 merge(setNames(as.data.frame(table(LS_train$medio)), c("medio", "count")),
@@ -309,19 +272,12 @@ merge(setNames(as.data.frame(table(LS_train$medio)), c("medio", "count")),
   arrange(desc(count)) %>%
   kbl() %>%
   kable_material(c("striped", "hover")) %>%
-  scroll_box(width = "100%", height = "350px")
-```
-
-```{r}
-ggplot(LS_train, aes(medio)) +
-  geom_bar(fill = "#009494") +
-  labs(x = "medio", y = "Nº medio", title = "medio") +
-  theme(plot.title = element_text(hjust = 0.5))
+  scroll_box(width = "100%", height = "auto")
 ```
 
 \
 
-**materia**
+**MATERIA**
 
 ```{r}
 merge(setNames(as.data.frame(table(LS_train$materia)), c("materia", "count")),
@@ -333,13 +289,98 @@ merge(setNames(as.data.frame(table(LS_train$materia)), c("materia", "count")),
   scroll_box(width = "100%", height = "350px")
 ```
 
+\
+
 ```{r}
-ggplot(LS_train, aes(materia)) +
-  geom_bar(fill = "#009494") +
-  coord_flip() + 
-  labs(x = "materia", y = "Nº materia", title = "materia") +
-  theme(plot.title = element_text(hjust = 0.5))
+# PLOT PRODUCTO
+# Paso 1: Sumarizar y ordenar los datos
+LS_train_sorted15 <- LS_train %>%
+  group_by(producto) %>%
+  summarize(count = n()) %>%
+  arrange(-count) %>%
+  slice(1:15) # Paso 2: Limitar a los 15 productos más frecuentes
+
+# Paso 3: Gráfico
+plot_producto <- ggplot(LS_train_sorted15, aes(x = reorder(producto, count), y = count)) + 
+                    geom_bar(stat = "identity", fill = "#009494") +
+                    coord_flip() +
+                    labs(x = "producto", y = "Nº producto", title = "Tipos producto") +
+                    theme(plot.title = element_text(hjust = 0.5))
+                    
+                    
+# PLOT RAMO                    
+plot_ramo <- ggplot(LS_train, aes(ramo)) +
+                geom_bar(fill = "#009494") +
+                labs(x = "ramo", y = "Nº ramo", title = "Tipos ramo") +
+                theme(plot.title = element_text(hjust = 0.5))
+
+
+# PLOT TIPO
+plot_tipo <- ggplot(LS_train, aes(tipo)) +
+                geom_bar(fill = "#009494") +
+                labs(x = "tipo", y = "Nº tipo", title = "Tipos tipo") +
+                theme(plot.title = element_text(hjust = 0.5))
+
+
+# PLOT ESTADO
+plot_estado <- ggplot(LS_train, aes(estado)) +
+                  geom_bar(fill = "#009494") +
+                  labs(x = "estado", y = "Nº estado", title = "Estado") +
+                  theme(plot.title = element_text(hjust = 0.5), 
+                        axis.text.x = element_text(angle = 10, hjust = 1))
+                  
+
+# PLOT MEDIO
+plot_medio <- ggplot(LS_train, aes(medio)) +
+                 geom_bar(fill = "#009494") +
+                 labs(x = "medio", y = "Nº medio", title = "Medio") +
+                 theme(plot.title = element_text(hjust = 0.5), 
+                       axis.text.x = element_text(angle = 10, hjust = 1))
+                 
+                 
+# PLOT MATERIA                 
+plot_materia <- ggplot(LS_train, aes(materia)) +
+                   geom_bar(fill = "#009494") +
+                   coord_flip() + 
+                   labs(x = "materia", y = "Nº materia", title = "Materia") +
+                   theme(plot.title = element_text(hjust = 0.5))             
 ```
+
+```{r}
+grid.arrange(plot_producto,
+             plot_materia,
+             ncol=2)
+```
+
+\
+
+Para la variable producto sólo representamos los 15 primeros ya que a partir de ahí son muchos los productos pero pocos los siniestros por producto. Se observa como un producto destaca ampliamente sobre el resto, en torno al 47% de los siniestros de esta compañía son del producto CROH.
+
+En cuanto a la materia, destaca ampliamente todo lo que tiene que ver con inmuebles, el 50% de los siniestros.
+
+```{r}
+grid.arrange(plot_ramo, 
+             plot_tipo,
+             ncol=2)
+```
+
+Casi el 98% de los siniestros son del ramo de Defensa Jurídica, ramo CORE de LS Insurance y tan sólo el 2% de Pérdidas Pecuniarias.
+
+Algo parecido sudece con el tipo de seguro ya que el 87% son de RA (reaseguro aceptado) y sólo un 13% aproximadamente de SD (seguro Directo). Esto nos indica que la mayor parte de la siniestralidad de la compañía procede de la aceptación de riesgo de otras compañías aseguradoras y no del riesgo que vende LS de manera directa.
+
+```{r}
+grid.arrange(plot_estado, 
+             plot_medio, 
+             ncol=2)
+```
+
+El 90% de los siniestros están terminados y a priori no se van a producir cambios en ellos por lo que los datos finales de estos contituyen de manera bastante fiel la realidad de la siniestralidad de la compañía y nos facilitará en gran medida la tarea de clasificar y predecir costes de siniestros.
+
+Por otro lado es relevante apreciar que en al rededor de un 72% de los siniestros terminan siendo gestionados de manera extrajudicial, un 15% en juicios llevados por letrados de la red propia de LS Insurance y un 13% acaban en manos de abogados externos que comunmente provocan un incremento en el coste del siniestro ya que no son llevados por personal interno.
+
+\
+
+\****No se realiza gráfico de la variable cobertura por cuestión estética debido a la gran cantidad de coberturas existentes, casi 200 distintas, y porque no tiene mucho sentido ya que entre ellas las diferencias son excasas***
 
 \
 
@@ -347,15 +388,15 @@ ggplot(LS_train, aes(materia)) +
 
 \
 
-**f_ocurrencia**
+**FECHA OCURRENCIA**
 
 \
 
-**f_declaracion**
+**FECHA DECLARACIÓN**
 
 \
 
-**f_cierre**
+**FECHA CIERRE**
 
 \
 
@@ -363,19 +404,19 @@ ggplot(LS_train, aes(materia)) +
 
 \
 
-**prov_inicial_cob**
+**PROVISIÓN INICIAL COBERTURA**
 
 \
 
-**prov_cob**
+**PROVISIÓN COBERTURA**
 
 \
 
-**pago_total_cob**
+**PAGO TOTAL COBERTURA**
 
 \
 
-**coste_total_cob**
+**COSTE TOTAL COBERTURA**
 
 \
 \
