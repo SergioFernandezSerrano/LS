@@ -59,6 +59,7 @@ library(cowplot) # Para mejoras de gráficos de ggplot2
 library(ggcorrplot) # Visualización de matrices de correlación usando ggplot2
 library(gmodels) # Varios modelos matemáticos y herramientas estadísticas
 library(ggfortify) # Extensión de ggplot2 con funciones para visualizar resultados de varios modelos estadísticos
+library(ggridges) # Para hacer Density Ridgeline Plot que son diagramas de densidad por agrupaciones que definamos
 library(caret) # Construcción y evaluación de modelos de aprendizaje automático
 library(scales) # Herramientas de escalado y formateo de datos
 library(class) # Funciones para clasificación
@@ -615,9 +616,64 @@ cat(paste0("% de siniestros declarados antes de 365 días: ", round(porcentaje_d
 cat(paste0("% de siniestros cerrados antes de 90 días: ", round(porcentaje_cierra_antes_90, 2), "%\n"))
 cat(paste0("% de siniestros cerrados antes de 365 días: ", round(porcentaje_cierra_antes_365, 2), "%\n"))
 ```
-Aunque el 77% de los siniestros se declara en los primeros 3 meses, exite un alto porcentaje de que el asegurado se demore en la comunicación de los mismos llegando a veces a tardar
 
-HEADMAPS
+Aunque el 77% de los siniestros se declara en los primeros 3 meses, exite un alto porcentaje de que el asegurado se demore en la comunicación de los mismos llegando a veces a tardar más de 1 año, lo cual es bastante malo para el negocio ya que afecta negativamente incrementando las reservas de la compañía en lo que se conoce como provisión de siniestros pendinetes de declaración (PSPD/IBNR), es decir reservar un dinero para siniestro que no están comunicados pero que la compañía tiene que preveer que se comunicarán y estimar el coste de los mismos.
+
+Con el segundo gráfico pretendía demostrar que este tipo de siniestros son de cola larga superando en un alto porcentaje el año en las gestiones de tramitación. Esto se debe principalmente al ramo que comercializa LS Insurance ya que al tratarse de defensa y asesoramiento jurídico se demora bastante los pacto extrajudiciales por no hablar de los que acaban en tela de juicio que todavía se demoran más.
+
+```{r}
+# PLOT HEATMAP MES OCURRENCIA
+ocurrencia_counts <- LS_train %>%
+  group_by(year = year(f_ocurrencia), month = month(f_ocurrencia, label = TRUE)) %>%
+  summarise(count = n())
+
+plot_heatmap_ocurrencia <- ggplot(ocurrencia_counts, aes(y = month, x = factor(year), fill = count)) + 
+                              geom_tile() + 
+                              labs(title = "Siniestros por Fecha de Ocurrencia", y = "Mes", x = "Año") +
+                              scale_fill_gradient(low = "white", high = "red") +
+                              theme(plot.title = element_text(hjust = 0.5),
+                                    axis.text.x = element_text(angle = 35, hjust = 1))
+
+
+
+# PLOT HEATMAP MES DECLARACIÓN
+declaración_counts <- LS_train %>%
+  group_by(year = year(f_declaracion), month = month(f_declaracion, label = TRUE)) %>%
+  summarise(count = n())
+
+plot_heatmap_declaración <- ggplot(declaración_counts, aes(y = month, x = factor(year), fill = count)) + 
+                              geom_tile() + 
+                              labs(title = "Siniestros por Fecha de Declaración", y = "Mes", x = "Año") +
+                              scale_fill_gradient(low = "white", high = "red") +
+                              theme(plot.title = element_text(hjust = 0.5),
+                                    axis.text.x = element_text(angle = 35, hjust = 1))
+
+
+
+# PLOT HEATMAP MES CIERRE
+cierre_counts <- LS_train %>%
+  group_by(year = year(f_cierre), month = month(f_cierre, label = TRUE)) %>%
+  summarise(count = n())
+
+plot_heatmap_cierre <- ggplot(cierre_counts, aes(y = month, x = factor(year), fill = count)) + 
+                              geom_tile() + 
+                              labs(title = "Siniestros por Fecha de Cierre", y = "Mes", x = "Año") +
+                              scale_fill_gradient(low = "white", high = "red") +
+                              theme(plot.title = element_text(hjust = 0.5),
+                                    axis.text.x = element_text(angle = 35, hjust = 1))
+```
+
+```{r}
+grid.arrange(plot_heatmap_ocurrencia,
+             plot_heatmap_declaración,
+             ncol=2)
+```
+
+Los heatmaps anteriores continúan demostrando como conforme han ido pasando los años hay un creciente número de siniestros ocurridos y comunicados así como la confirmación del patrón que mencionábamos con anterioridad sobre las diferencias entre meses con festividades y meses sin ellas.
+
+\
+
+\****No se realiza gráfico heatmap de la variable f_cierre porque su visualización no aporta gran información sobre los años y meses que más siniestros se cierran ya que hay un alto porcentaje de siniestros que continúan abiertos.***
 
 \
 
@@ -627,17 +683,198 @@ HEADMAPS
 
 **PROVISIÓN INICIAL COBERTURA**
 
+```{r}
+# Estadísticas descriptivas para prov_inicial_cob
+stats_prov_inicial <- LS_train %>%
+  summarize(
+    Minimo = round(min(prov_inicial_cob, na.rm = TRUE), 2),
+    Maximo = round(max(prov_inicial_cob, na.rm = TRUE), 2),
+    Mediana = round(median(prov_inicial_cob, na.rm = TRUE), 2),
+    Media = round(mean(prov_inicial_cob, na.rm = TRUE), 2),
+    Desviacion_Estandar = round(sd(prov_inicial_cob, na.rm = TRUE), 2),
+    Varianza = round(var(prov_inicial_cob, na.rm = TRUE), 2),
+    Q1 = round(quantile(prov_inicial_cob, 0.25, na.rm = TRUE), 2),
+    Q3 = round(quantile(prov_inicial_cob, 0.75, na.rm = TRUE), 2)
+  ) %>%
+  mutate(
+    Rango = round(Maximo - Minimo, 2),
+    Rango_Intercuartilico = round(Q3 - Q1, 2)
+  ) %>%
+  gather("Estadístico", "Valor")
+
+# Agregamos la moda como una fila adicional
+mode_value <- as.numeric(names(sort(table(LS_train$prov_inicial_cob), decreasing = TRUE)[1]))
+stats_prov_inicial <- rbind(stats_prov_inicial, data.frame(Estadístico = "Moda", Valor = round(mode_value, 2)))
+
+# Convertir la tabla a kbl
+tabla_prov_inicial <- kbl(stats_prov_inicial, align = "c", col.names = c("Estadístico", "Valor")) %>%
+  kable_material()
+
+tabla_prov_inicial
+```
+
+```{r}
+# PLOT HISTOGRAMA PROVISIÓN INICIAL COBERTURA
+plot_hist_dens_prov_inicial <- ggplot(LS_train, aes(x=prov_inicial_cob)) +
+                                  geom_histogram(aes(y=..density..), fill="#009494", bins=20) +
+                                  geom_density(alpha=0.2, color="#D55E00") + 
+                                  labs(title="Hist. y Dens. prov_inicial_cob", y="Densidad") +
+                                  theme(plot.title = element_text(hjust = 0.5))
+
+
+
+# PLOT BOXPLOT PROVISIÓN INICIAL COBERTURA
+plot_boxplot_prov_inicial <- ggplot(LS_train, aes(y=prov_inicial_cob)) +
+                                geom_boxplot(fill="#009494", outlier.color="#D55E00", outlier.shape=16, outlier.size=2) +
+                                labs(title="Boxplot prov_inicial_cob") +
+                                theme(plot.title = element_text(hjust = 0.5))
+
+
+
+# PLOT SCATTERPLOT PROVISIÓN INICIAL COBERTURA
+plot_geomplot_prov_inicial <- ggplot(LS_train, aes(x=seq_along(prov_inicial_cob), y=prov_inicial_cob)) +
+                                 geom_point(color="#009494", alpha=0.4) +
+                                 labs(title="Scatter Plot prov_inicial_cob", x="Índice", y="Valor") +
+                                 theme(plot.title = element_text(hjust = 0.5))
+
+
+
+# PLOT QQPLOT PROVISIÓN INICIAL COBERTURA
+plot_qqplot_prov_inicial <- ggplot(LS_train, aes(sample=prov_inicial_cob)) +
+                               stat_qq(distribution=stats::qnorm, dparams=list(mean=mean(LS_train$prov_inicial_cob, na.rm=TRUE), sd=sd(LS_train$prov_inicial_cob, na.rm=TRUE))) +
+                               geom_abline(intercept=0, slope=1, color="#D55E00") +
+                               labs(title="Q-Q Plot prov_inicial_cob") +
+                               theme(plot.title = element_text(hjust = 0.5))
+```
+
+```{r}
+grid.arrange(plot_hist_dens_prov_inicial,
+             plot_boxplot_prov_inicial,
+             plot_geomplot_prov_inicial,
+             plot_qqplot_prov_inicial,
+             ncol=2)
+```
+
 \
 
 **PROVISIÓN COBERTURA**
+
+```{r}
+# Estadísticas descriptivas para prov_cob
+stats_prov_cob <- LS_train %>%
+  summarize(
+    Minimo = round(min(prov_cob, na.rm = TRUE), 2),
+    Maximo = round(max(prov_cob, na.rm = TRUE), 2),
+    Mediana = round(median(prov_cob, na.rm = TRUE), 2),
+    Media = round(mean(prov_cob, na.rm = TRUE), 2),
+    Desviacion_Estandar = round(sd(prov_cob, na.rm = TRUE), 2),
+    Varianza = round(var(prov_cob, na.rm = TRUE), 2),
+    Q1 = round(quantile(prov_cob, 0.25, na.rm = TRUE), 2),
+    Q3 = round(quantile(prov_cob, 0.75, na.rm = TRUE), 2)
+  ) %>%
+  mutate(
+    Rango = round(Maximo - Minimo, 2),
+    Rango_Intercuartilico = round(Q3 - Q1, 2)
+  ) %>%
+  gather("Estadístico", "Valor")
+
+mode_value_prov_cob <- as.numeric(names(sort(table(LS_train$prov_cob), decreasing = TRUE)[1]))
+stats_prov_cob <- rbind(stats_prov_cob, data.frame(Estadístico = "Moda", Valor = round(mode_value_prov_cob, 2)))
+
+tabla_prov_cob <- kbl(stats_prov_cob, align = "c", col.names = c("Estadístico", "Valor")) %>%
+  kable_material()
+
+tabla_prov_cob
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
 
 \
 
 **PAGO TOTAL COBERTURA**
 
+```{r}
+# Estadísticas descriptivas para pago_total_cob
+stats_pago_total_cob <- LS_train %>%
+  summarize(
+    Minimo = round(min(pago_total_cob, na.rm = TRUE), 2),
+    Maximo = round(max(pago_total_cob, na.rm = TRUE), 2),
+    Mediana = round(median(pago_total_cob, na.rm = TRUE), 2),
+    Media = round(mean(pago_total_cob, na.rm = TRUE), 2),
+    Desviacion_Estandar = round(sd(pago_total_cob, na.rm = TRUE), 2),
+    Varianza = round(var(pago_total_cob, na.rm = TRUE), 2),
+    Q1 = round(quantile(pago_total_cob, 0.25, na.rm = TRUE), 2),
+    Q3 = round(quantile(pago_total_cob, 0.75, na.rm = TRUE), 2)
+  ) %>%
+  mutate(
+    Rango = round(Maximo - Minimo, 2),
+    Rango_Intercuartilico = round(Q3 - Q1, 2)
+  ) %>%
+  gather("Estadístico", "Valor")
+
+mode_value_pago_total_cob <- as.numeric(names(sort(table(LS_train$pago_total_cob), decreasing = TRUE)[1]))
+stats_pago_total_cob <- rbind(stats_pago_total_cob, data.frame(Estadístico = "Moda", Valor = round(mode_value_pago_total_cob, 2)))
+
+tabla_pago_total_cob <- kbl(stats_pago_total_cob, align = "c", col.names = c("Estadístico", "Valor")) %>%
+  kable_material()
+
+tabla_pago_total_cob
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
 \
 
 **COSTE TOTAL COBERTURA**
+
+```{r}
+# Estadísticas descriptivas para coste_total_cob
+stats_coste_total_cob <- LS_train %>%
+  summarize(
+    Minimo = round(min(coste_total_cob, na.rm = TRUE), 2),
+    Maximo = round(max(coste_total_cob, na.rm = TRUE), 2),
+    Mediana = round(median(coste_total_cob, na.rm = TRUE), 2),
+    Media = round(mean(coste_total_cob, na.rm = TRUE), 2),
+    Desviacion_Estandar = round(sd(coste_total_cob, na.rm = TRUE), 2),
+    Varianza = round(var(coste_total_cob, na.rm = TRUE), 2),
+    Q1 = round(quantile(coste_total_cob, 0.25, na.rm = TRUE), 2),
+    Q3 = round(quantile(coste_total_cob, 0.75, na.rm = TRUE), 2)
+  ) %>%
+  mutate(
+    Rango = round(Maximo - Minimo, 2),
+    Rango_Intercuartilico = round(Q3 - Q1, 2)
+  ) %>%
+  gather("Estadístico", "Valor")
+
+mode_value_coste_total_cob <- as.numeric(names(sort(table(LS_train$coste_total_cob), decreasing = TRUE)[1]))
+stats_coste_total_cob <- rbind(stats_coste_total_cob, data.frame(Estadístico = "Moda", Valor = round(mode_value_coste_total_cob, 2)))
+
+tabla_coste_total_cob <- kbl(stats_coste_total_cob, align = "c", col.names = c("Estadístico", "Valor")) %>%
+  kable_material()
+
+tabla_coste_total_cob
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
 
 \
 \
