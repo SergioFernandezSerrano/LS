@@ -1,0 +1,77 @@
+
+sub producto de inicial
+
+desvisación de interes de siniestros que inicialmente han costado más
+
+PCA - sistema para variables cuantitativas Exploratory factor analisis CFA - para variables categóricas - combina desde
+
+Modelos GAM - bajo ciertas condiciones puedo pintan un gráfico en dos dimensiones. Gráfico de dependencia parcial. Ganar capacidad ee explicación para mis jefes
+
+con que forma influye la variable tal  en un siniestro, crece más rápido, más lento... etc
+
+felipe.ortega@urjc.es - git usuario: glimmerphoenix - git hub
+
+
+
+
+Estadísticas Descriptivas:
+
+Forma de la distribución: Asimetría y Curtosis.
+
+
+
+Identificación y tratamiento de valores atípicos:
+
+Puedes utilizar el rango intercuartil (IQR) o z-scores para identificar valores atípicos. Una vez identificados, puedes decidir si deseas eliminarlos, imputarlos o mantenerlos según la naturaleza de tus datos y el propósito del análisis.
+
+
+
+Verificación de normalidad:
+
+Prueba de Shapiro-Wilk o de Kolmogorov-Smirnov. Si tus datos no siguen una distribución normal y necesitas que lo hagan (por ejemplo, para ciertos tipos de análisis), puedes considerar transformaciones como la transformación logarítmica o de Box-Cox.
+
+Comparación entre variables:
+
+Si bien esto se asemeja más a un análisis bivariante, es útil observar las relaciones entre tus variables cuantitativas a través de gráficos de dispersión (scatter plots) y matrices de correlación.
+Tratamiento de valores faltantes:
+
+
+
+ANÁLISIS MULTIVARIANTE
+
+hacer un ggcorrplot - ggpairs
+
+
+
+GUARDA ESTE CODIGO PARA EL ANALISIS MULTIVARIANTE !!
+
+```{r}
+ggplot(LS_train, aes(x=prov_inicial_cob, y=factor(LS_train$ramo))) +
+  geom_density_ridges(fill="#009494") +
+  labs(title="Density Ridgeline Plot prov_inicial_cob / ramo") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+
+ggplot(LS_train, aes(x=prov_inicial_cob, y=factor(LS_train$tipo))) +
+  geom_density_ridges(fill="#009494") +
+  labs(title="Density Ridgeline Plot prov_inicial_cob / tipo") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+
+ggplot(LS_train, aes(x=prov_inicial_cob, y=factor(LS_train$medio))) +
+  geom_density_ridges(fill="#009494") +
+  labs(title="Density Ridgeline Plot prov_inicial_cob / medio") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+
+
+ggplot(LS_train, aes(x=prov_inicial_cob, y=factor(LS_train$materia))) +
+  geom_density_ridges(fill="#009494") +
+  labs(title="Density Ridgeline Plot prov_inicial_cob / materia") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+
