@@ -1374,8 +1374,42 @@ La provisión media se sitúa en torno a los 230€ pero tiene una desviación e
 
 **SINIESTROS PUNTA**
 
-```{r}
+Dada la correlación lineal que existe entre prov_cob y pago_total_cob con coste_total_cob, y que es precisamente esta última sobre la que queremos predecir; vamos a hacer un pequeño análisis de datos atípicos sin tener en cuenta los siniestros coste 0 ni el siniestro negativo ya que sólo hay un dato así y es totalmente atípico, incñuso podría ser un error. 
 
+Nos interesa realizar este análisis ya que como hemos podido observar en los gráficos de más arriba, hay una gran concentración de siniestros con coste alrededor de los 300€, pero también tenemos multitud de siniestros con coste por encima de los 1000€ que se podrían considerar como siniestros punta y que podrían distorsionar los modelos que iremos haciendo  conforme avance este estudio.
+
+```{r}
+# Filtrar el dataset para incluir solo los valores de coste_total_cob mayores a 0.00
+LS_train_filtered_mayor0.00_outliers <- LS_train %>% filter(coste_total_cob > 0.00)
+
+# Calcular Q1 y Q3 para coste_total_cob mayores a 0.00
+Q1_mayor0.00 <- quantile(LS_train_filtered_mayor0.00_outliers$coste_total_cob, 0.25)
+Q3_mayor0.00 <- quantile(LS_train_filtered_mayor0.00_outliers$coste_total_cob, 0.75)
+
+# Calcular IQR
+IQR <- Q3_mayor0.00 - Q1_mayor0.00
+
+# Identificar límites para outliers
+coste_total_cob_lower_bound <- Q1_mayor0.00 - 1.5 * IQR
+coste_total_cob_upper_bound <- Q3_mayor0.00 + 1.5 * IQR
+
+# coste_total_cob_lower_bound
+coste_total_cob_upper_bound
+```
+
+\
+
+Se puede entender entonces que cualquier siniestro de LS Insurance por encima de los 500€ es un siniestro punta. Vamos a ver cuantos siniestros tenemos por debajo y por encima de esa cifra.
+
+```{r}
+# Siniestros con coste_total_cob menor que 500.00
+siniestros_menor_500 <- LS_train_filtered_mayor0.00_outliers %>% filter(coste_total_cob < 500.00) %>% nrow()
+
+# Siniestros con coste_total_cob mayor o igual a 500.00
+siniestros_mayor_o_igual_500 <- LS_train_filtered_mayor0.00_outliers %>% filter(coste_total_cob >= 500.00) %>% nrow()
+
+cat(paste0("nº de siniestros coste_total_cob < 500€ es ", siniestros_menor_500), "\n")
+cat(paste0("nº de siniestros coste_total_cob >= 500€ es ", siniestros_mayor_o_igual_500), "\n")
 ```
 
 
@@ -1389,7 +1423,7 @@ La provisión media se sitúa en torno a los 230€ pero tiene una desviación e
 \
 \
 
-# Procesado de variables cualitativas
+# Procesado de variables
 
 \
 \
