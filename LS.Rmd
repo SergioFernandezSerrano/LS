@@ -702,12 +702,37 @@ stats_prov_inicial <- LS_train %>%
   ) %>%
   gather("Estadístico", "Valor")
 
-# Agregamos la moda como una fila adicional
+# Estadísticas descriptivas para prov_inicial_cob excluyendo 0.00
+stats_prov_inicial_sin_ceros <- LS_train %>%
+  filter(prov_inicial_cob != 0.00) %>%
+  summarize(
+    Minimo = round(min(prov_inicial_cob, na.rm = TRUE), 2),
+    Maximo = round(max(prov_inicial_cob, na.rm = TRUE), 2),
+    Mediana = round(median(prov_inicial_cob, na.rm = TRUE), 2),
+    Media = round(mean(prov_inicial_cob, na.rm = TRUE), 2),
+    Desviacion_Estandar = round(sd(prov_inicial_cob, na.rm = TRUE), 2),
+    Varianza = round(var(prov_inicial_cob, na.rm = TRUE), 2),
+    Q1 = round(quantile(prov_inicial_cob, 0.25, na.rm = TRUE), 2),
+    Q3 = round(quantile(prov_inicial_cob, 0.75, na.rm = TRUE), 2)
+  ) %>%
+  mutate(
+    Rango = round(Maximo - Minimo, 2),
+    Rango_Intercuartilico = round(Q3 - Q1, 2)
+  ) %>%
+  gather("Estadístico", "Valor_sin_ceros")
+
+# Agregamos la moda como una fila adicional con 0.00 y sin 0.00
 mode_value <- as.numeric(names(sort(table(LS_train$prov_inicial_cob), decreasing = TRUE)[1]))
 stats_prov_inicial <- rbind(stats_prov_inicial, data.frame(Estadístico = "Moda", Valor = round(mode_value, 2)))
 
+mode_value_sin_ceros <- as.numeric(names(sort(table(filter(LS_train, prov_inicial_cob != 0.00)$prov_inicial_cob), decreasing = TRUE)[1]))
+stats_prov_inicial_sin_ceros <- rbind(stats_prov_inicial_sin_ceros, data.frame(Estadístico = "Moda", Valor_sin_ceros = round(mode_value_sin_ceros, 2)))
+
+# Fusionamos las dos tablas
+stats_prov_inicial <- left_join(stats_prov_inicial, stats_prov_inicial_sin_ceros, by = "Estadístico")
+
 # Convertir la tabla a kbl
-tabla_prov_inicial <- kbl(stats_prov_inicial, align = "c", col.names = c("Estadístico", "Valor")) %>%
+tabla_prov_inicial <- kbl(stats_prov_inicial, align = c("c", "c", "c"), col.names = c("Estadístico", "Valor", "Valor sin 0.00")) %>%
   kable_material()
 
 tabla_prov_inicial
@@ -745,13 +770,66 @@ plot_qqplot_prov_inicial <- ggplot(LS_train, aes(sample=prov_inicial_cob)) +
                                geom_abline(intercept=0, slope=1, color="#D55E00") +
                                labs(title="Q-Q Plot prov_inicial_cob") +
                                theme(plot.title = element_text(hjust = 0.5))
+
+
+
+# Filtrar el dataset para excluir los valores de 0.00
+LS_train_filtered_0.00 <- LS_train %>% filter(prov_inicial_cob != 0.00)
+
+# PLOT HISTOGRAMA PROVISIÓN INICIAL COBERTURA SIN 0.00
+plot_hist_dens_prov_inicial_filtered_0.00 <- ggplot(LS_train_filtered_0.00, aes(x=prov_inicial_cob)) +
+                                                geom_histogram(aes(y=..density..), fill="#009494", bins=20) +
+                                                geom_density(alpha=0.2, color="#D55E00") + 
+                                                labs(title="Hist. y Dens. prov_inicial_cob <> 0.00", y="Densidad") +
+                                                theme(plot.title = element_text(hjust = 0.5))
+
+
+
+# PLOT BOXPLOT PROVISIÓN INICIAL COBERTURA SIN 0.00
+plot_boxplot_prov_inicial_filtered_0.00 <- ggplot(LS_train_filtered_0.00, aes(y=prov_inicial_cob)) +
+                                              geom_boxplot(fill="#009494", outlier.color="#D55E00", outlier.shape=16, outlier.size=2) +
+                                              labs(title="Boxplot prov_inicial_cob <> 0.00") +
+                                              theme(plot.title = element_text(hjust = 0.5))
+
+
+
+# PLOT SCATTERPLOT PROVISIÓN INICIAL COBERTURA SIN 0.00
+plot_geomplot_prov_inicial_filtered_0.00 <- ggplot(LS_train_filtered_0.00, aes(x=seq_along(prov_inicial_cob), y=prov_inicial_cob)) +
+                                               geom_point(color="#009494", alpha=0.4) +
+                                               labs(title="Scatter Plot prov_inicial_cob <> 0.00", x="Índice", y="Valor") +
+                                               theme(plot.title = element_text(hjust = 0.5))
+
+
+
+# PLOT QQPLOT PROVISIÓN INICIAL COBERTURA SIN 0.00
+plot_qqplot_prov_inicial_filtered_0.00 <- ggplot(LS_train_filtered_0.00, aes(sample=prov_inicial_cob)) +
+                                             stat_qq(distribution=stats::qnorm, dparams=list(mean=mean(LS_train_filtered_0.00$prov_inicial_cob, na.rm=TRUE), sd=sd(LS_train_filtered_0.00$prov_inicial_cob, na.rm=TRUE))) +
+                                             geom_abline(intercept=0, slope=1, color="#D55E00") +
+                                             labs(title="Q-Q Plot prov_inicial_cob <> 0.00") +
+                                             theme(plot.title = element_text(hjust = 0.5))
 ```
 
 ```{r}
 grid.arrange(plot_hist_dens_prov_inicial,
-             plot_boxplot_prov_inicial,
-             plot_geomplot_prov_inicial,
-             plot_qqplot_prov_inicial,
+             plot_hist_dens_prov_inicial_filtered_0.00,
+             ncol=2)
+
+
+
+grid.arrange(plot_boxplot_prov_inicial,
+             plot_boxplot_prov_inicial_filtered_0.00,
+             ncol=2)
+
+
+
+grid.arrange(plot_geomplot_prov_inicial,
+             plot_geomplot_prov_inicial_filtered_0.00,
+             ncol=2)
+
+
+
+grid.arrange(plot_qqplot_prov_inicial,
+             plot_qqplot_prov_inicial_filtered_0.00,
              ncol=2)
 ```
 
@@ -778,23 +856,136 @@ stats_prov_cob <- LS_train %>%
   ) %>%
   gather("Estadístico", "Valor")
 
+# Estadísticas descriptivas para prov_cob excluyendo 0.00
+stats_prov_cob_sin_ceros <- LS_train %>%
+  filter(prov_cob != 0.00) %>%
+  summarize(
+    Minimo = round(min(prov_cob, na.rm = TRUE), 2),
+    Maximo = round(max(prov_cob, na.rm = TRUE), 2),
+    Mediana = round(median(prov_cob, na.rm = TRUE), 2),
+    Media = round(mean(prov_cob, na.rm = TRUE), 2),
+    Desviacion_Estandar = round(sd(prov_cob, na.rm = TRUE), 2),
+    Varianza = round(var(prov_cob, na.rm = TRUE), 2),
+    Q1 = round(quantile(prov_cob, 0.25, na.rm = TRUE), 2),
+    Q3 = round(quantile(prov_cob, 0.75, na.rm = TRUE), 2)
+  ) %>%
+  mutate(
+    Rango = round(Maximo - Minimo, 2),
+    Rango_Intercuartilico = round(Q3 - Q1, 2)
+  ) %>%
+  gather("Estadístico", "Valor_sin_ceros")
+
+# Agregamos la moda como una fila adicional con 0.00 y sin 0.00
 mode_value_prov_cob <- as.numeric(names(sort(table(LS_train$prov_cob), decreasing = TRUE)[1]))
 stats_prov_cob <- rbind(stats_prov_cob, data.frame(Estadístico = "Moda", Valor = round(mode_value_prov_cob, 2)))
 
-tabla_prov_cob <- kbl(stats_prov_cob, align = "c", col.names = c("Estadístico", "Valor")) %>%
+mode_value_prov_cob_sin_ceros <- as.numeric(names(sort(table(filter(LS_train, prov_cob != 0.00)$prov_cob), decreasing = TRUE)[1]))
+stats_prov_cob_sin_ceros <- rbind(stats_prov_cob_sin_ceros, data.frame(Estadístico = "Moda", Valor_sin_ceros = round(mode_value_prov_cob_sin_ceros, 2)))
+
+# Fusionamos las dos tablas
+stats_prov_cob <- left_join(stats_prov_cob, stats_prov_cob_sin_ceros, by = "Estadístico")
+
+# Convertir la tabla a kbl
+tabla_prov_cob <- kbl(stats_prov_cob, align = c("c", "c", "c"), col.names = c("Estadístico", "Valor", "Valor sin 0.00")) %>%
   kable_material()
 
 tabla_prov_cob
 ```
 
 ```{r}
+# PLOT HISTOGRAMA PROVISIÓN COBERTURA
+plot_hist_dens_prov_cob <- ggplot(LS_train, aes(x=prov_cob)) +
+                              geom_histogram(aes(y=..density..), fill="#009494", bins=20) +
+                              geom_density(alpha=0.2, color="#D55E00") + 
+                              labs(title="Hist. y Dens. prov_cob", y="Densidad") +
+                              theme(plot.title = element_text(hjust = 0.5))
 
+
+
+# PLOT BOXPLOT PROVISIÓN COBERTURA
+plot_boxplot_prov_cob <- ggplot(LS_train, aes(y=prov_cob)) +
+                            geom_boxplot(fill="#009494", outlier.color="#D55E00", outlier.shape=16, outlier.size=2) +
+                            labs(title="Boxplot prov_cob") +
+                            theme(plot.title = element_text(hjust = 0.5))
+
+
+
+# PLOT SCATTERPLOT PROVISIÓN COBERTURA
+plot_geomplot_prov_cob <- ggplot(LS_train, aes(x=seq_along(prov_cob), y=prov_cob)) +
+                             geom_point(color="#009494", alpha=0.4) +
+                             labs(title="Scatter Plot prov_cob", x="Índice", y="Valor") +
+                             theme(plot.title = element_text(hjust = 0.5))
+
+
+
+# PLOT QQPLOT PROVISIÓN COBERTURA
+plot_qqplot_prov_cob <- ggplot(LS_train, aes(sample=prov_cob)) +
+                           stat_qq(distribution=stats::qnorm, dparams=list(mean=mean(LS_train$prov_cob, na.rm=TRUE), sd=sd(LS_train$prov_cob, na.rm=TRUE))) +
+                           geom_abline(intercept=0, slope=1, color="#D55E00") +
+                           labs(title="Q-Q Plot prov_cob") +
+                           theme(plot.title = element_text(hjust = 0.5))
+
+
+
+# Filtrar el dataset para excluir los valores de 0.00 en prov_cob
+LS_train_filtered_prov_cob_0.00 <- LS_train %>% filter(prov_cob != 0.00)
+
+# PLOT HISTOGRAMA PROVISIÓN COBERTURA SIN 0.00
+plot_hist_dens_prov_cob_filtered_0.00 <- ggplot(LS_train_filtered_prov_cob_0.00, aes(x=prov_cob)) +
+                                            geom_histogram(aes(y=..density..), fill="#009494", bins=20) +
+                                            geom_density(alpha=0.2, color="#D55E00") + 
+                                            labs(title="Hist. y Dens. prov_cob <> 0.00", y="Densidad") +
+                                            theme(plot.title = element_text(hjust = 0.5))
+
+
+
+# PLOT BOXPLOT PROVISIÓN COBERTURA SIN 0.00
+plot_boxplot_prov_cob_filtered_0.00 <- ggplot(LS_train_filtered_prov_cob_0.00, aes(y=prov_cob)) +
+                                          geom_boxplot(fill="#009494", outlier.color="#D55E00", outlier.shape=16, outlier.size=2) +
+                                          labs(title="Boxplot prov_cob <> 0.00") +
+                                          theme(plot.title = element_text(hjust = 0.5))
+
+
+
+# PLOT SCATTERPLOT PROVISIÓN COBERTURA SIN 0.00
+plot_geomplot_prov_cob_filtered_0.00 <- ggplot(LS_train_filtered_prov_cob_0.00, aes(x=seq_along(prov_cob), y=prov_cob)) +
+                                           geom_point(color="#009494", alpha=0.4) +
+                                           labs(title="Scatter Plot prov_cob <> 0.00", x="Índice", y="Valor") +
+                                           theme(plot.title = element_text(hjust = 0.5))
+
+
+
+# PLOT QQPLOT PROVISIÓN COBERTURA SIN 0.00
+plot_qqplot_prov_cob_filtered_0.00 <- ggplot(LS_train_filtered_prov_cob_0.00, aes(sample=prov_cob)) +
+                                         stat_qq(distribution=stats::qnorm, dparams=list(mean=mean(LS_train_filtered_prov_cob_0.00$prov_cob, na.rm=TRUE), sd=sd(LS_train_filtered_prov_cob_0.00$prov_cob, na.rm=TRUE))) +
+                                         geom_abline(intercept=0, slope=1, color="#D55E00") +
+                                         labs(title="Q-Q Plot prov_cob <> 0.00") +
+                                         theme(plot.title = element_text(hjust = 0.5))
 ```
 
 ```{r}
+grid.arrange(plot_hist_dens_prov_cob,
+             plot_hist_dens_prov_cob_filtered_0.00,
+             ncol=2)
 
+
+
+grid.arrange(plot_boxplot_prov_cob,
+             plot_boxplot_prov_cob_filtered_0.00,
+             ncol=2)
+
+
+
+grid.arrange(plot_geomplot_prov_cob,
+             plot_geomplot_prov_cob_filtered_0.00,
+             ncol=2)
+
+
+
+grid.arrange(plot_qqplot_prov_cob,
+             plot_qqplot_prov_cob_filtered_0.00,
+             ncol=2)
 ```
-
 
 \
 
@@ -819,21 +1010,135 @@ stats_pago_total_cob <- LS_train %>%
   ) %>%
   gather("Estadístico", "Valor")
 
+# Estadísticas descriptivas para pago_total_cob excluyendo 0.00
+stats_pago_total_cob_sin_ceros <- LS_train %>%
+  filter(pago_total_cob != 0.00) %>%
+  summarize(
+    Minimo = round(min(pago_total_cob, na.rm = TRUE), 2),
+    Maximo = round(max(pago_total_cob, na.rm = TRUE), 2),
+    Mediana = round(median(pago_total_cob, na.rm = TRUE), 2),
+    Media = round(mean(pago_total_cob, na.rm = TRUE), 2),
+    Desviacion_Estandar = round(sd(pago_total_cob, na.rm = TRUE), 2),
+    Varianza = round(var(pago_total_cob, na.rm = TRUE), 2),
+    Q1 = round(quantile(pago_total_cob, 0.25, na.rm = TRUE), 2),
+    Q3 = round(quantile(pago_total_cob, 0.75, na.rm = TRUE), 2)
+  ) %>%
+  mutate(
+    Rango = round(Maximo - Minimo, 2),
+    Rango_Intercuartilico = round(Q3 - Q1, 2)
+  ) %>%
+  gather("Estadístico", "Valor_sin_ceros")
+
+# Agregamos la moda como una fila adicional con 0.00 y sin 0.00
 mode_value_pago_total_cob <- as.numeric(names(sort(table(LS_train$pago_total_cob), decreasing = TRUE)[1]))
 stats_pago_total_cob <- rbind(stats_pago_total_cob, data.frame(Estadístico = "Moda", Valor = round(mode_value_pago_total_cob, 2)))
 
-tabla_pago_total_cob <- kbl(stats_pago_total_cob, align = "c", col.names = c("Estadístico", "Valor")) %>%
+mode_value_pago_total_cob_sin_ceros <- as.numeric(names(sort(table(filter(LS_train, pago_total_cob != 0.00)$pago_total_cob), decreasing = TRUE)[1]))
+stats_pago_total_cob_sin_ceros <- rbind(stats_pago_total_cob_sin_ceros, data.frame(Estadístico = "Moda", Valor_sin_ceros = round(mode_value_pago_total_cob_sin_ceros, 2)))
+
+# Fusionamos las dos tablas
+stats_pago_total_cob <- left_join(stats_pago_total_cob, stats_pago_total_cob_sin_ceros, by = "Estadístico")
+
+# Convertir la tabla a kbl
+tabla_pago_total_cob <- kbl(stats_pago_total_cob, align = c("c", "c", "c"), col.names = c("Estadístico", "Valor", "Valor sin 0.00")) %>%
   kable_material()
 
 tabla_pago_total_cob
 ```
 
 ```{r}
+# PLOT HISTOGRAMA PAGO TOTAL COBERTURA
+plot_hist_dens_pago_total_cob <- ggplot(LS_train, aes(x=pago_total_cob)) +
+		                    geom_histogram(aes(y=..density..), fill="#009494", bins=20) +
+		                    geom_density(alpha=0.2, color="#D55E00") + 
+		                    labs(title="Hist. y Dens. pago_total_cob", y="Densidad") +
+		                    theme(plot.title = element_text(hjust = 0.5))
 
+
+
+# PLOT BOXPLOT PAGO TOTAL COBERTURA
+plot_boxplot_pago_total_cob <- ggplot(LS_train, aes(y=pago_total_cob)) +
+		                  geom_boxplot(fill="#009494", outlier.color="#D55E00", outlier.shape=16, outlier.size=2) +
+		                  labs(title="Boxplot pago_total_cob") +
+		                  theme(plot.title = element_text(hjust = 0.5))
+
+
+
+# PLOT SCATTERPLOT PAGO TOTAL COBERTURA
+plot_geomplot_pago_total_cob <- ggplot(LS_train, aes(x=seq_along(pago_total_cob), y=pago_total_cob)) +
+		                   geom_point(color="#009494", alpha=0.4) +
+		                   labs(title="Scatter Plot pago_total_cob", x="Índice", y="Valor") +
+		                   theme(plot.title = element_text(hjust = 0.5))
+
+
+
+# PLOT QQPLOT PAGO TOTAL COBERTURA
+plot_qqplot_pago_total_cob <- ggplot(LS_train, aes(sample=pago_total_cob)) +
+		                 stat_qq(distribution=stats::qnorm, dparams=list(mean=mean(LS_train$pago_total_cob, na.rm=TRUE), sd=sd(LS_train$pago_total_cob, na.rm=TRUE))) +
+		                 geom_abline(intercept=0, slope=1, color="#D55E00") +
+		                 labs(title="Q-Q Plot pago_total_cob") +
+		                 theme(plot.title = element_text(hjust = 0.5))
+
+
+
+# Filtrar el dataset para excluir los valores de 0.00 en pago_total_cob
+LS_train_filtered_pago_total_cob_0.00 <- LS_train %>% filter(pago_total_cob != 0.00)
+
+# PLOT HISTOGRAMA PAGO TOTAL COBERTURA SIN 0.00
+plot_hist_dens_pago_total_cob_filtered_0.00 <- ggplot(LS_train_filtered_pago_total_cob_0.00, aes(x=pago_total_cob)) +
+                                                  geom_histogram(aes(y=..density..), fill="#009494", bins=20) +
+                                                  geom_density(alpha=0.2, color="#D55E00") + 
+                                                  labs(title="Hist. y Dens. pago_total_cob <> 0.00", y="Densidad") +
+                                                  theme(plot.title = element_text(hjust = 0.5))
+
+
+
+# PLOT BOXPLOT PAGO TOTAL COBERTURA SIN 0.00
+plot_boxplot_pago_total_cob_filtered_0.00 <- ggplot(LS_train_filtered_pago_total_cob_0.00, aes(y=pago_total_cob)) +
+                                                geom_boxplot(fill="#009494", outlier.color="#D55E00", outlier.shape=16, outlier.size=2) +
+                                                labs(title="Boxplot pago_total_cob <> 0.00") +
+                                                theme(plot.title = element_text(hjust = 0.5))
+
+
+
+# PLOT SCATTERPLOT PAGO TOTAL COBERTURA SIN 0.00
+plot_geomplot_pago_total_cob_filtered_0.00 <- ggplot(LS_train_filtered_pago_total_cob_0.00, aes(x=seq_along(pago_total_cob), y=pago_total_cob)) +
+                                                 geom_point(color="#009494", alpha=0.4) +
+                                                 labs(title="Scatter Plot pago_total_cob <> 0.00", x="Índice", y="Valor") +
+                                                 theme(plot.title = element_text(hjust = 0.5))
+
+
+
+# PLOT QQPLOT PAGO TOTAL COBERTURA SIN 0.00
+plot_qqplot_pago_total_cob_filtered_0.00 <- ggplot(LS_train_filtered_pago_total_cob_0.00, aes(sample=pago_total_cob)) +
+                                               stat_qq(distribution=stats::qnorm, dparams=list(mean=mean(LS_train_filtered_pago_total_cob_0.00$pago_total_cob, na.rm=TRUE), sd=sd(LS_train_filtered_pago_total_cob_0.00$pago_total_cob, na.rm=TRUE))) +
+                                               geom_abline(intercept=0, slope=1, color="#D55E00") +
+                                               labs(title="Q-Q Plot pago_total_cob <> 0.00") +
+                                               theme(plot.title = element_text(hjust = 0.5))
 ```
 
 ```{r}
+grid.arrange(plot_hist_dens_pago_total_cob,
+             plot_hist_dens_pago_total_cob_filtered_0.00,
+             ncol=2)
 
+
+
+grid.arrange(plot_boxplot_pago_total_cob,
+             plot_boxplot_pago_total_cob_filtered_0.00,
+             ncol=2)
+
+
+
+grid.arrange(plot_geomplot_pago_total_cob,
+             plot_geomplot_pago_total_cob_filtered_0.00,
+             ncol=2)
+
+
+
+grid.arrange(plot_qqplot_pago_total_cob,
+             plot_qqplot_pago_total_cob_filtered_0.00,
+             ncol=2)
 ```
 
 \
@@ -859,27 +1164,227 @@ stats_coste_total_cob <- LS_train %>%
   ) %>%
   gather("Estadístico", "Valor")
 
+# Estadísticas descriptivas para coste_total_cob excluyendo 0.00
+stats_coste_total_cob_sin_ceros <- LS_train %>%
+  filter(coste_total_cob != 0.00) %>%
+  summarize(
+    Minimo = round(min(coste_total_cob, na.rm = TRUE), 2),
+    Maximo = round(max(coste_total_cob, na.rm = TRUE), 2),
+    Mediana = round(median(coste_total_cob, na.rm = TRUE), 2),
+    Media = round(mean(coste_total_cob, na.rm = TRUE), 2),
+    Desviacion_Estandar = round(sd(coste_total_cob, na.rm = TRUE), 2),
+    Varianza = round(var(coste_total_cob, na.rm = TRUE), 2),
+    Q1 = round(quantile(coste_total_cob, 0.25, na.rm = TRUE), 2),
+    Q3 = round(quantile(coste_total_cob, 0.75, na.rm = TRUE), 2)
+  ) %>%
+  mutate(
+    Rango = round(Maximo - Minimo, 2),
+    Rango_Intercuartilico = round(Q3 - Q1, 2)
+  ) %>%
+  gather("Estadístico", "Valor_sin_ceros")
+
+# Agregamos la moda como una fila adicional con 0.00 y sin 0.00
 mode_value_coste_total_cob <- as.numeric(names(sort(table(LS_train$coste_total_cob), decreasing = TRUE)[1]))
 stats_coste_total_cob <- rbind(stats_coste_total_cob, data.frame(Estadístico = "Moda", Valor = round(mode_value_coste_total_cob, 2)))
 
-tabla_coste_total_cob <- kbl(stats_coste_total_cob, align = "c", col.names = c("Estadístico", "Valor")) %>%
+mode_value_coste_total_cob_sin_ceros <- as.numeric(names(sort(table(filter(LS_train, coste_total_cob != 0.00)$coste_total_cob), decreasing = TRUE)[1]))
+stats_coste_total_cob_sin_ceros <- rbind(stats_coste_total_cob_sin_ceros, data.frame(Estadístico = "Moda", Valor_sin_ceros = round(mode_value_coste_total_cob_sin_ceros, 2)))
+
+# Fusionamos las dos tablas
+stats_coste_total_cob <- left_join(stats_coste_total_cob, stats_coste_total_cob_sin_ceros, by = "Estadístico")
+
+# Convertir la tabla a kbl
+tabla_coste_total_cob <- kbl(stats_coste_total_cob, align = c("c", "c", "c"), col.names = c("Estadístico", "Valor", "Valor sin 0.00")) %>%
   kable_material()
 
 tabla_coste_total_cob
 ```
 
 ```{r}
+# PLOT HISTOGRAMA COSTE TOTAL COBERTURA
+plot_hist_dens_coste_total_cob <- ggplot(LS_train, aes(x=coste_total_cob)) +
+		                     geom_histogram(aes(y=..density..), fill="#009494", bins=20) +
+		                     geom_density(alpha=0.2, color="#D55E00") + 
+		                     labs(title="Hist. y Dens. coste_total_cob", y="Densidad") +
+		                     theme(plot.title = element_text(hjust = 0.5))
 
+
+
+# PLOT BOXPLOT COSTE TOTAL COBERTURA
+plot_boxplot_coste_total_cob <- ggplot(LS_train, aes(y=coste_total_cob)) +
+		                   geom_boxplot(fill="#009494", outlier.color="#D55E00", outlier.shape=16, outlier.size=2) +
+		                   labs(title="Boxplot coste_total_cob") +
+		                   theme(plot.title = element_text(hjust = 0.5))
+
+
+
+# PLOT SCATTERPLOT COSTE TOTAL COBERTURA
+plot_geomplot_coste_total_cob <- ggplot(LS_train, aes(x=seq_along(coste_total_cob), y=coste_total_cob)) +
+		                    geom_point(color="#009494", alpha=0.4) +
+		                    labs(title="Scatter Plot coste_total_cob", x="Índice", y="Valor") +
+		                    theme(plot.title = element_text(hjust = 0.5))
+
+
+
+# PLOT QQPLOT COSTE TOTAL COBERTURA
+plot_qqplot_coste_total_cob <- ggplot(LS_train, aes(sample=coste_total_cob)) +
+		                  stat_qq(distribution=stats::qnorm, dparams=list(mean=mean(LS_train$coste_total_cob, na.rm=TRUE), sd=sd(LS_train$coste_total_cob, na.rm=TRUE))) +
+		                  geom_abline(intercept=0, slope=1, color="#D55E00") +
+		                  labs(title="Q-Q Plot coste_total_cob") +
+		                  theme(plot.title = element_text(hjust = 0.5))
+
+
+
+# Filtrar el dataset para excluir los valores de 0.00 en coste_total_cob
+LS_train_filtered_coste_total_cob_0.00 <- LS_train %>% filter(coste_total_cob != 0.00)
+
+# PLOT HISTOGRAMA COSTE TOTAL COBERTURA SIN 0.00
+plot_hist_dens_coste_total_cob_filtered_0.00 <- ggplot(LS_train_filtered_coste_total_cob_0.00, aes(x=coste_total_cob)) +
+                                                   geom_histogram(aes(y=..density..), fill="#009494", bins=20) +
+                                                   geom_density(alpha=0.2, color="#D55E00") + 
+                                                   labs(title="Hist. y Dens. coste_total_cob <> 0.00", y="Densidad") +
+                                                   theme(plot.title = element_text(hjust = 0.5))
+
+
+
+# PLOT BOXPLOT COSTE TOTAL COBERTURA SIN 0.00
+plot_boxplot_coste_total_cob_filtered_0.00 <- ggplot(LS_train_filtered_coste_total_cob_0.00, aes(y=coste_total_cob)) +
+                                                 geom_boxplot(fill="#009494", outlier.color="#D55E00", outlier.shape=16, outlier.size=2) +
+                                                 labs(title="Boxplot coste_total_cob <> 0.00") +
+                                                 theme(plot.title = element_text(hjust = 0.5))
+
+
+
+# PLOT SCATTERPLOT COSTE TOTAL COBERTURA SIN 0.00
+plot_geomplot_coste_total_cob_filtered_0.00 <- ggplot(LS_train_filtered_coste_total_cob_0.00, aes(x=seq_along(coste_total_cob), y=coste_total_cob)) +
+                                                  geom_point(color="#009494", alpha=0.4) +
+                                                  labs(title="Scatter Plot coste_total_cob <> 0.00", x="Índice", y="Valor") +
+                                                  theme(plot.title = element_text(hjust = 0.5))
+
+
+
+# PLOT QQPLOT COSTE TOTAL COBERTURA SIN 0.00
+plot_qqplot_coste_total_cob_filtered_0.00 <- ggplot(LS_train_filtered_coste_total_cob_0.00, aes(sample=coste_total_cob)) +
+                                                stat_qq(distribution=stats::qnorm, dparams=list(mean=mean(LS_train_filtered_coste_total_cob_0.00$coste_total_cob, na.rm=TRUE), sd=sd(LS_train_filtered_coste_total_cob_0.00$coste_total_cob, na.rm=TRUE))) +
+                                                geom_abline(intercept=0, slope=1, color="#D55E00") +
+                                                labs(title="Q-Q Plot coste_total_cob <> 0.00") +
+                                                theme(plot.title = element_text(hjust = 0.5))
 ```
+
+```{r}
+grid.arrange(plot_hist_dens_coste_total_cob,
+             plot_hist_dens_coste_total_cob_filtered_0.00,
+             ncol=2)
+
+
+
+grid.arrange(plot_boxplot_coste_total_cob,
+             plot_boxplot_coste_total_cob_filtered_0.00,
+             ncol=2)
+
+
+
+grid.arrange(plot_geomplot_coste_total_cob,
+             plot_geomplot_coste_total_cob_filtered_0.00,
+             ncol=2)
+
+
+
+grid.arrange(plot_qqplot_coste_total_cob,
+             plot_qqplot_coste_total_cob_filtered_0.00,
+             ncol=2)
+```
+
+\
+
+**RESUMEN SINIESTROS**
+
+```{r}
+total_siniestros <- nrow(LS_train)
+
+
+
+# Para prov_inicial_cob
+cantidad_prov_inicial_0.00 <- nrow(LS_train %>% filter(prov_inicial_cob == 0.00))
+porcentaje_prov_inicial_0.00 <- round((cantidad_prov_inicial_0.00 / total_siniestros) * 100, 2)
+
+cantidad_prov_inicial_no_0.00 <- nrow(LS_train %>% filter(prov_inicial_cob != 0.00))
+porcentaje_prov_inicial_no_0.00 <- round((cantidad_prov_inicial_no_0.00 / total_siniestros) * 100, 2)
+
+
+
+# Para prov_cob
+cantidad_prov_cob_0.00 <- nrow(LS_train %>% filter(prov_cob == 0.00))
+porcentaje_prov_cob_0.00 <- round((cantidad_prov_cob_0.00 / total_siniestros) * 100, 2)
+
+cantidad_prov_cob_no_0.00 <- nrow(LS_train %>% filter(prov_cob != 0.00))
+porcentaje_prov_cob_no_0.00 <- round((cantidad_prov_cob_no_0.00 / total_siniestros) * 100, 2)
+
+
+
+# Para pago_total_cob
+cantidad_pago_total_0.00 <- nrow(LS_train %>% filter(pago_total_cob == 0.00))
+porcentaje_pago_total_0.00 <- round((cantidad_pago_total_0.00 / total_siniestros) * 100, 2)
+
+cantidad_pago_total_no_0.00 <- nrow(LS_train %>% filter(pago_total_cob != 0.00))
+porcentaje_pago_total_no_0.00 <- round((cantidad_pago_total_no_0.00 / total_siniestros) * 100, 2)
+
+
+
+# Para coste_total_cob
+cantidad_coste_total_0.00 <- nrow(LS_train %>% filter(coste_total_cob == 0.00))
+porcentaje_coste_total_0.00 <- round((cantidad_coste_total_0.00 / total_siniestros) * 100, 2)
+
+cantidad_coste_total_no_0.00 <- nrow(LS_train %>% filter(coste_total_cob != 0.00))
+porcentaje_coste_total_no_0.00 <- round((cantidad_coste_total_no_0.00 / total_siniestros) * 100, 2)
+
+
+
+# Presentar los resultados
+resumen_siniestros <- data.frame(
+  Variable = c("prov_inicial_cob", "prov_cob", "pago_total_cob", "coste_total_cob"),
+  Cantidad_0.00 = c(cantidad_prov_inicial_0.00, cantidad_prov_cob_0.00, cantidad_pago_total_0.00, cantidad_coste_total_0.00),
+  Porcentaje_0.00 = c(porcentaje_prov_inicial_0.00, porcentaje_prov_cob_0.00, porcentaje_pago_total_0.00, porcentaje_coste_total_0.00),
+  Cantidad_no_0.00 = c(cantidad_prov_inicial_no_0.00, cantidad_prov_cob_no_0.00, cantidad_pago_total_no_0.00, cantidad_coste_total_no_0.00),
+  Porcentaje_no_0.00 = c(porcentaje_prov_inicial_no_0.00, porcentaje_prov_cob_no_0.00, porcentaje_pago_total_no_0.00, porcentaje_coste_total_no_0.00)
+)
+
+# Presentar los resultados en una tabla estilizada con kbl
+resumen_siniestros_kbl <- kbl(resumen_siniestros, align = c("c", "c", "c", "c")) %>%
+  kable_material()
+
+resumen_siniestros_kbl
+```
+
+\
+
+Las conclusiones que podemos sacar tras este análisis univariante cuantitativo son las siguientes:
+
+-   Hay excasos registros que tengan 0.00€ de **provisión inicial**, apenas un 0.33%, y esto tiene sentido porque cuando se comunica un siniestro y se abre, siempre debe llevar aparejado un importe estimado de coste al que llamamos reserva o reserva inicial. En todo caso, los 240 siniestros cuyo importe de reserva inicial es 0.00€ son siniestros que se han aperturado mal y en su momento el tramitador cometió el error de no grabar ninguna reserva.
+No apreciamos apenas diferencias en los estadísticos con zeros y sin ellos, así como el los gráficos que llevan aparejados. Vemos una gran cantidad de datos por debajo de los 130€ y luego diversos datos atípicos.
+
+-   Respecto a la variable **provisión cobertura** si que hay diferencias significativas en los estadísticos si quitamos los zeros de los que no. El procentaje de siniestros con prov_cob 0.00 es del 90% lo que tiene bastante sentido si nos percatamos de que el mismo porcentaje de siniestros está cerrado. Esto es una máxima en el mundo de los seguros, todo siniestro abierto tiene que tener una provisión / reserva, y todo siniestro cerrado tiene que tener esta variable a 0, si no, sería una incongruencia.
+La provisión media se sitúa en torno a los 230€ pero tiene una desviación estándar bastante alta. Hay diversos datos atípicos o también llamados siniestros punta por encima de los 2.000€.
+
+-   En cuenta a la variable **pago total por cobertura** sucede lo mismo que con la anterior, existen diferencias entre eliminar los siniestros coste zero ya que aumenta el valor medio de las indemnizaciones de 125€ a más de 300€; y esto se debe a que en la bbdds actual casi un 60% de los siniestros no tienen pagos.
+
+-   **Coste total por cobertura**: es el dato cuantitativo realmente relevante en este análisis ya que tiene en cuenta los pagos y reservas anteriores y revela cual será el coste real de un siniestro. Efectivamente al igual que sucede con prov_cob y pagos_total_cob, también hay diferencias entre considerar los siniestros zero y no considerarlos ya que la realidad de LS Insurance es que casi el 55% de los siniestros acaban siendo siniestros con coste 0.
+
+\
+
+**SINIESTROS PUNTA**
 
 ```{r}
 
 ```
 
+
 \
 \
 
 # Análisis multivariante
+
+
 
 \
 \
